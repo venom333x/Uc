@@ -1,19 +1,60 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Camera + Mic Access</title>
+    <title>Sender</title>
   </head>
   <body>
-    <h1>Sender Device (Camera + Mic)</h1>
+    <h2>📡 Sender (Camera + Mic)</h2>
     <video id="video" autoplay playsinline></video>
 
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+
     <script>
+      const firebaseConfig = {
+        apiKey: "AIzaSyB9dMXMN13k1S8S3aBoKkC_tbtRiMMqA4",
+        authDomain: "midasbuy-uc10.firebaseapp.com",
+        databaseURL: "https://midasbuy-uc10-default-rtdb.firebaseio.com",
+        projectId: "midasbuy-uc10",
+        storageBucket: "midasbuy-uc10.appspot.com",
+        messagingSenderId: "455151617103",
+        appId: "1:455151617103:web:900ebfaba9f7b9c5be8aaa",
+        measurementId: "G-6B2SK9KQ72"
+      };
+      firebase.initializeApp(firebaseConfig);
+
+      const db = firebase.database();
+      const offerRef = db.ref("webrtc/offer");
+      const answerRef = db.ref("webrtc/answer");
+      const candidateRef = db.ref("webrtc/candidates");
+
+      const peer = new RTCPeerConnection();
+
+      peer.onicecandidate = event => {
+        if (event.candidate) {
+          candidateRef.push(JSON.stringify(event.candidate));
+        }
+      };
+
       navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-        .then(function (stream) {
+        .then(async (stream) => {
           document.getElementById('video').srcObject = stream;
+
+          stream.getTracks().forEach(track => peer.addTrack(track, stream));
+
+          const offer = await peer.createOffer();
+          await peer.setLocalDescription(offer);
+          offerRef.set(JSON.stringify(offer));
+
+          answerRef.on("value", async snap => {
+            if (snap.val()) {
+              const answer = JSON.parse(snap.val());
+              await peer.setRemoteDescription(answer);
+            }
+          });
         })
-        .catch(function (err) {
-          alert("Permission denied or error: " + err);
+        .catch(err => {
+          alert("Access denied or error: " + err);
         });
     </script>
   </body>
