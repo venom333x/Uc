@@ -1,1 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Receiver</title>
+</head>
+<body>
+  <h2>📺 Receiver (View Stream)</h2>
+  <video id="remoteVideo" autoplay playsinline></video>
 
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+
+  <script>
+    const firebaseConfig = {
+      // 👇 Replace with the SAME Firebase config
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT.firebaseapp.com",
+      databaseURL: "https://YOUR_PROJECT.firebaseio.com",
+      projectId: "YOUR_PROJECT",
+      storageBucket: "YOUR_PROJECT.appspot.com",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
+    firebase.initializeApp(firebaseConfig);
+
+    const db = firebase.database();
+    const offerRef = db.ref("webrtc/offer");
+    const answerRef = db.ref("webrtc/answer");
+    const candidateRef = db.ref("webrtc/candidates");
+
+    const peer = new RTCPeerConnection();
+
+    peer.ontrack = e => {
+      document.getElementById("remoteVideo").srcObject = e.streams[0];
+    };
+
+    offerRef.on("value", async snap => {
+      if (snap.val()) {
+        const offer = JSON.parse(snap.val());
+        await peer.setRemoteDescription(offer);
+        const answer = await peer.createAnswer();
+        await peer.setLocalDescription(answer);
+        answerRef.set(JSON.stringify(answer));
+      }
+    });
+
+    candidateRef.on("child_added"_
